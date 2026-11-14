@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../apps/api/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AssetType {
+  PLATFORM
+  PIPELINE
+  RISER
+  VALVE
+  MANIFOLD
+  CONNECTOR
+  PUMP
+  EQUIPMENT
+}
+
+enum AssetHealth {
+  UNKNOWN
+  HEALTHY
+  ATTENTION
+  CRITICAL
+}
+
+enum AssetCriticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AssetOperationalStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum UserRole {
+  ADMIN
+  ENGINEER
+  INSPECTOR
+  VIEWER
+}
+
+enum InspectionType {
+  GENERAL
+  CORROSION
+  CATHODIC_PROTECTION
+  VIBRATION
+  FUNCTIONAL
+}
+
+enum InspectionStatus {
+  DRAFT
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ChecklistOutcome {
+  OPEN
+  PASS
+  FAIL
+  NOT_APPLICABLE
+}
+
+enum AnomalyType {
+  CORROSION
+  CATHODIC_PROTECTION
+  VIBRATION
+  LEAK
+  INSTRUMENTATION
+  OTHER
+}
+
+enum AnomalySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AnomalyStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum RiskCategory {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  CANCELLED
+}
+
+model User {
+  id                  String           @id @default(cuid())
+  email               String           @unique
+  displayName         String
+  passwordHash        String
+  role                UserRole
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  sessions            Session[]
+  createdInspections  Inspection[]     @relation("InspectionCreator")
+  assignedInspections Inspection[]     @relation("InspectionAssignee")
+  createdAnomalies    Anomaly[]        @relation("AnomalyCreator")
+  assignedAnomalies   Anomaly[]        @relation("AnomalyAssignee")
+  verifiedAnomalies   Anomaly[]        @relation("AnomalyVerifier")
+  assessedRisks       RiskAssessment[]
+  createdWorkOrders   WorkOrder[]      @relation("WorkOrderCreator")
+  assignedWorkOrders  WorkOrder[]      @relation("WorkOrderAssignee")
+  verifiedWorkOrders  WorkOrder[]      @relation("WorkOrderVerifier")
+  auditEvents         AuditEvent[]
+
+  @@index([role, isActive])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model Asset {
+  id               String                 @id @default(cuid())
+  assetCode        String                 @unique
+  name             String
+  type             AssetType
+  description      String?
+  parentId         String?
+  parent           Asset?                 @relation("AssetHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children         Asset[]                @relation("AssetHierarchy")
+  location         String
+  offshoreField    String?
+  latitude         Float?
+  longitude        Float?
+  installationDate DateTime?
+  health           AssetHealth            @default(UNKNOWN)
+  criticality      AssetCriticality       @default(MEDIUM)
+  status           AssetOperationalStatus @default(ACTIVE)
+  manufacturer     String?
+  model            String?
+  serialNumber     String?
+  isArchived       Boolean                @default(false)
+  archivedAt       DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  inspections      Inspection[]
+  anomalies        Anomaly[]
+  workOrders       WorkOrder[]
+
+  @@index([parentId])
+  @@index([type])
+  @@index([status, isArchived])
+  @@index([name])
+}
+
+model Inspection {
+  id             String           @id @default(cuid())
+  inspectionCode String           @unique
+  assetId        String
+  type           InspectionType
+  status         InspectionStatus @default(DRAFT)
+  plannedAt      DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  notes          String?
+  createdById    String
+  assignedToId   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  asset          Asset            @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  createdBy      User             @relation("InspectionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo     User?            @relation("InspectionAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  checklist      ChecklistItem[]
+  anomalies      Anomaly[]
+
+  @@index([assetId, status])
+  @@index([assignedToId, plannedAt])
+}
+
+model ChecklistItem {
+  id                String           @id @default(cuid())
+  inspectionId      String
+  position          Int
+  prompt            String
+  outcome           ChecklistOutcome @default(OPEN)
+  observation       String?
+  measurement       Float?
+  unit              String?
+  evidenceReference String?
+  updatedAt         DateTime         @updatedAt
+  inspection        Inspection       @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@unique([inspectionId, position])
+  @@index([inspectionId, outcome])
+}
+
+model Anomaly {
+  id                String           @id @default(cuid())
+  reference         String           @unique
+  assetId           String
+  inspectionId      String?
+  type              AnomalyType
+  severity          AnomalySeverity
+  status            AnomalyStatus    @default(OPEN)
+  title             String
+  description       String
+  detectionDetails  String?
+  assignedToId      String?
+  resolutionNotes   String?
+  verificationNotes String?
+  verifiedById      String?
+  verifiedAt        DateTime?
+  closedAt          DateTime?
+  createdById       String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  asset             Asset            @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  inspection        Inspection?      @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  createdBy         User             @relation("AnomalyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo        User?            @relation("AnomalyAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  verifiedBy        User?            @relation("AnomalyVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  riskAssessments   RiskAssessment[]
+  workOrder         WorkOrder?
+
+  @@index([assetId, status])
+  @@index([severity, status])
+}
+
+model RiskAssessment {
+  id           String       @id @default(cuid())
+  anomalyId    String
+  version      String
+  likelihood   Int
+  consequence  Int
+  exposure     Int
+  score        Int
+  category     RiskCategory
+  factors      Json
+  explanation  String
+  assessedById String
+  createdAt    DateTime     @default(now())
+  anomaly      Anomaly      @relation(fields: [anomalyId], references: [id], onDelete: Cascade)
+  assessedBy   User         @relation(fields: [assessedById], references: [id], onDelete: Restrict)
+
+  @@index([anomalyId, createdAt])
+}
+
+model WorkOrder {
+  id                String            @id @default(cuid())
+  number            String            @unique
+  assetId           String
+  anomalyId         String?           @unique
+  title             String
+  description       String?
+  priority          WorkOrderPriority
+  status            WorkOrderStatus   @default(OPEN)
+  plannedAt         DateTime?
+  dueAt             DateTime?
+  completedAt       DateTime?
+  completionNotes   String?
+  verifiedById      String?
+  verifiedAt        DateTime?
+  verificationNotes String?
+  createdById       String
+  assignedToId      String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  asset             Asset             @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  anomaly           Anomaly?          @relation(fields: [anomalyId], references: [id], onDelete: Restrict)
+  createdBy         User              @relation("WorkOrderCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo        User?             @relation("WorkOrderAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  verifiedBy        User?             @relation("WorkOrderVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([assetId, status])
+  @@index([assignedToId, status])
+  @@index([dueAt, status])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String
+  entityType String
+  entityId   String
+  action     String
+  fromStatus String?
+  toStatus   String?
+  summary    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+}

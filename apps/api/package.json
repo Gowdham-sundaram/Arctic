@@ -1,0 +1,38 @@
+{
+  "name": "@arctic/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "npm run typecheck",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "db:generate": "prisma generate --config prisma.config.ts",
+    "db:migrate": "prisma migrate dev --config prisma.config.ts",
+    "db:deploy": "prisma migrate deploy --config prisma.config.ts",
+    "db:seed": "tsx ../../prisma/seed.ts"
+  },
+  "dependencies": {
+    "@arctic/contracts": "0.1.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "pino": "^9.9.4",
+    "pino-http": "^10.5.0",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.6",
+    "@types/supertest": "^6.0.3",
+    "prisma": "^7.10.1",
+    "supertest": "^7.1.4",
+    "vitest": "^5.1.0"
+  }
+}

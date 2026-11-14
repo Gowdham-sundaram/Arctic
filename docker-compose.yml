@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: arctic
+      POSTGRES_PASSWORD: arctic_local
+      POSTGRES_DB: arctic
+    ports:
+      - "5432:5432"
+    volumes:
+      - arctic-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arctic -d arctic"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  arctic-postgres-data:
