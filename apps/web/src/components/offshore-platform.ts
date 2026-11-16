@@ -659,8 +659,8 @@ export function buildOffshorePlatform(scene: THREE.Scene): void {
     );
   }
 
-  addDeck(model, 4.5, 3.25, 5.62, 0.14, deckFill, frame, darkFrame);
-  addGuardrail(model, 4.4, 3.15, 5.7, frame);
+  addDeck(model, 4.0, 3.5, 5.62, 0.14, deckFill, frame, darkFrame);
+  addGuardrail(model, 3.8, 3.4, 5.7, frame);
   addModule(
     model,
     new THREE.Vector3(-0.55, 6.04, -0.85),
@@ -711,7 +711,7 @@ export function buildOffshorePlatform(scene: THREE.Scene): void {
   }
 
   addDerrick(model, frame, darkFrame, cyan);
-  addSensorMast(model, -1.65, -0.45, 5.42, 1.62, frame, darkFrame, cyan);
+  addSensorMast(model, -1.35, -0.45, 5.42, 1.62, frame, darkFrame, cyan);
   addSensorMast(model, 1.38, -0.55, 5.35, 1.08, frame, darkFrame, cyan);
   addCrane(
     model,
@@ -732,53 +732,101 @@ export function buildOffshorePlatform(scene: THREE.Scene): void {
     cyan,
   );
 
-  const padCenter = new THREE.Vector3(3.92, 5.02, -1.45);
-  box(
-    model,
-    new THREE.Vector3(3.65, 4.72, -1.45),
-    new THREE.Vector3(2.65, 0.16, 2.0),
-    deckFill,
-    frame,
-  );
-  for (const x of [3.0, 4.55]) {
-    for (const z of [-2.15, -0.75]) {
+  const padCenter = new THREE.Vector3(2.75, 5.63, 1.68);
+  const padRadius = 0.75;
+  const supportBaseY = 4.53;
+  const supportTopY = padCenter.y - 0.06;
+  const supportX = [padCenter.x - 0.4, padCenter.x + 0.4] as const;
+  const supportZ = [padCenter.z - 0.4, padCenter.z + 0.4] as const;
+  const lowerBraceY = supportBaseY + 0.06;
+  const upperBraceY = supportTopY - 0.02;
+
+  for (const x of supportX) {
+    for (const z of supportZ) {
       beam(
         model,
-        new THREE.Vector3(x, 4.48, z),
-        new THREE.Vector3(x, 4.96, z),
+        new THREE.Vector3(x, supportBaseY, z),
+        new THREE.Vector3(x, supportTopY, z),
         frame,
-        0.05,
+        0.055,
       );
     }
   }
-  for (const z of [-2.15, -0.75]) {
+  for (const y of [lowerBraceY, upperBraceY]) {
+    for (const z of supportZ) {
+      beam(
+        model,
+        new THREE.Vector3(supportX[0], y, z),
+        new THREE.Vector3(supportX[1], y, z),
+        darkFrame,
+        0.035,
+      );
+    }
+    for (const x of supportX) {
+      beam(
+        model,
+        new THREE.Vector3(x, y, supportZ[0]),
+        new THREE.Vector3(x, y, supportZ[1]),
+        darkFrame,
+        0.035,
+      );
+    }
+  }
+  for (const z of supportZ) {
     beam(
       model,
-      new THREE.Vector3(2.25, 4.5, z),
-      new THREE.Vector3(3.0, 4.96, z),
-      darkFrame,
-      0.035,
+      new THREE.Vector3(supportX[0], lowerBraceY, z),
+      new THREE.Vector3(supportX[1], upperBraceY, z),
+      frame,
+      0.03,
     );
     beam(
       model,
-      new THREE.Vector3(3.0, 4.96, z),
-      new THREE.Vector3(4.55, 4.96, z),
-      darkFrame,
-      0.035,
+      new THREE.Vector3(supportX[1], lowerBraceY, z),
+      new THREE.Vector3(supportX[0], upperBraceY, z),
+      frame,
+      0.03,
     );
   }
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.22, 0.08, 48), deckFill);
+  for (const x of supportX) {
+    beam(
+      model,
+      new THREE.Vector3(x, lowerBraceY, supportZ[0]),
+      new THREE.Vector3(x, upperBraceY, supportZ[1]),
+      frame,
+      0.03,
+    );
+    beam(
+      model,
+      new THREE.Vector3(x, lowerBraceY, supportZ[1]),
+      new THREE.Vector3(x, upperBraceY, supportZ[0]),
+      frame,
+      0.03,
+    );
+  }
+  beam(
+    model,
+    new THREE.Vector3(2.0, upperBraceY, padCenter.z),
+    new THREE.Vector3(supportX[0], upperBraceY, padCenter.z),
+    darkFrame,
+    0.045,
+  );
+
+  const pad = new THREE.Mesh(
+    new THREE.CylinderGeometry(padRadius, padRadius, 0.12, 48),
+    deckFill,
+  );
   pad.position.copy(padCenter);
   model.add(pad);
   const padEdge = new THREE.LineSegments(
-    new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.22, 1.22, 0.08, 48)),
+    new THREE.EdgesGeometry(new THREE.CylinderGeometry(padRadius, padRadius, 0.12, 48)),
     frame,
   );
   padEdge.position.copy(padCenter);
   model.add(padEdge);
-  const padRing = new THREE.Mesh(new THREE.TorusGeometry(1.03, 0.024, 6, 48), frame);
+  const padRing = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.024, 6, 48), frame);
   padRing.rotation.x = Math.PI / 2;
-  padRing.position.set(padCenter.x, padCenter.y + 0.05, padCenter.z);
+  padRing.position.set(padCenter.x, padCenter.y + 0.065, padCenter.z);
   model.add(padRing);
 
   const markCanvas = document.createElement("canvas");
@@ -799,7 +847,7 @@ export function buildOffshorePlatform(scene: THREE.Scene): void {
     const texture = new THREE.CanvasTexture(markCanvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     const mark = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.9, 0.9),
+      new THREE.PlaneGeometry(0.7, 0.7),
       new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
@@ -809,16 +857,16 @@ export function buildOffshorePlatform(scene: THREE.Scene): void {
       }),
     );
     mark.rotation.x = -Math.PI / 2;
-    mark.position.set(padCenter.x, padCenter.y + 0.052, padCenter.z);
+    mark.position.set(padCenter.x, padCenter.y + 0.061, padCenter.z);
     model.add(mark);
   }
   for (let index = 0; index < 12; index += 1) {
     const angle = (index / 12) * Math.PI * 2;
     const light = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), amber);
     light.position.set(
-      padCenter.x + Math.cos(angle) * 1.12,
-      padCenter.y + 0.06,
-      padCenter.z + Math.sin(angle) * 1.12,
+      padCenter.x + Math.cos(angle) * 0.68,
+      padCenter.y + 0.07,
+      padCenter.z + Math.sin(angle) * 0.68,
     );
     model.add(light);
   }

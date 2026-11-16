@@ -107,7 +107,7 @@ function locationAnchor(location: string): [number, number, number] {
   const deckNumber = Number(value.match(/\bdeck\s+(\d+)\b/)?.[1] ?? 2);
   const deckHeight = Math.min(5.2, 3.78 + (deckNumber - 1) * 0.48);
 
-  if (value.includes("helideck")) return [2.1, 6.05, -1.2];
+  if (value.includes("helideck")) return [2.75, 5.98, 1.68];
   if (value.includes("north") && value.includes("route")) return [0, 0.25, -7.5];
   if (value.includes("north") && value.includes("subsea")) return [0, 0.45, -5.8];
   if (value.includes("south") && value.includes("subsea")) return [0, 0.45, 5.8];
